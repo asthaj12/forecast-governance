@@ -64,19 +64,13 @@ body {
 
 /* ── Tab nav ───────────────────────────────────────────────────── */
 .tab-nav {
-  position: sticky;
-  top: 48px;
-  z-index: 100;
   background: var(--surface-1);
   border-bottom: 1px solid var(--gridline);
   padding: 0 20px;
   display: flex; gap: 2px;
   overflow-x: auto;
-  scrollbar-width: none;
 }
-.tab-nav::-webkit-scrollbar { display: none; }
 .tab-btn {
-  flex-shrink: 0;
   padding: 10px 16px;
   border: none; background: none;
   font-size: 12px; font-weight: 500;
@@ -255,32 +249,9 @@ tr:hover td { background: #f4f3f0; }
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
-/* Canvas safety net — prevents Chart.js inline style.width from blowing past container */
-canvas { max-width: 100%; }
-
 @media (max-width: 768px) {
   .chart-grid.cols-2, .chart-grid.cols-3 { grid-template-columns: 1fr; }
   .item-stat-row { grid-template-columns: 1fr 1fr; }
-  main { padding: 12px; }
-  .kpi-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-  /* Long real-scale text causes horizontal overflow — hide it */
-  .demo-banner .real-scale { display: none; }
-  /* Footer wraps instead of overflowing */
-  .page-footer { flex-wrap: wrap; gap: 8px; }
-}
-@media (max-width: 640px) {
-  /* Tabs don't need to be sticky on small screens — saves space and removes overlap */
-  .tab-nav { position: static; }
-  .snav-items { display: none; }
-  .snav-brand { margin-right: auto; }
-  .item-stat-row { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 480px) {
-  .kpi-row { grid-template-columns: 1fr 1fr; }
-  .kpi-card .kpi-value { font-size: 20px; }
-  .confidentiality-banner { display: none; }
-  /* GitHub badge is lowest priority — drop it on very narrow screens */
-  .snav-badge + .snav-badge { display: none; }
 }
 
 /* ── Shared nav ─── */
@@ -295,7 +266,7 @@ canvas { max-width: 100%; }
 .sndrop-toggle:hover{background:rgba(99,102,241,.07);color:#0f172a;}
 .sndrop-toggle svg{width:9px;height:9px;transition:transform .18s;}
 .sndrop:hover .sndrop-toggle svg{transform:rotate(180deg);}
-.sndrop-menu{position:absolute;top:100%;padding-top:6px;margin-top:-6px;left:0;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px;min-width:210px;box-shadow:0 12px 40px rgba(0,0,0,.14);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;}
+.sndrop-menu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px;min-width:210px;box-shadow:0 12px 40px rgba(0,0,0,.14);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;}
 .sndrop:hover .sndrop-menu{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);}
 .sndrop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:11px;font-weight:500;color:#475569;text-decoration:none;transition:background .1s,color .1s;}
 .sndrop-item:hover{background:rgba(99,102,241,.09);color:#0f172a;}
@@ -312,53 +283,40 @@ canvas { max-width: 100%; }
 
 <!-- ── Shared portfolio nav ── -->
 <nav class="snav">
-  <a href="https://asthaj12.github.io" class="snav-brand">AJ<span> · Portfolio</span></a>
+  <a href="https://ajwalmart12.github.io" class="snav-brand">AJ<span> · Portfolio</span></a>
   <div class="snav-items">
     <div class="sndrop">
       <div class="sndrop-toggle">Dashboards<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3.5l3 3 3-3"/></svg></div>
       <div class="sndrop-menu">
-        <a class="sndrop-item" href="https://asthaj12.github.io/forecast-governance/">
+        <a class="sndrop-item" href="https://ajwalmart12.github.io/forecast-governance/">
           <div class="sndrop-icon" style="background:rgba(99,102,241,.12)">📊</div>
           <div><div class="sndrop-lbl">Forecast Governance</div><div class="sndrop-sub">Anomaly triage · Bias correction</div></div>
         </a>
-        <a class="sndrop-item" href="https://asthaj12.github.io/seasonal-planning/">
+        <a class="sndrop-item" href="https://ajwalmart12.github.io/seasonal-planning/">
           <div class="sndrop-icon" style="background:rgba(245,158,11,.12)">📅</div>
           <div><div class="sndrop-lbl">Scenario Planning</div><div class="sndrop-sub">Demand scenarios · Commitment staging</div></div>
         </a>
-        <a class="sndrop-item" href="https://asthaj12.github.io/pricing-demand-response/">
+        <a class="sndrop-item" href="https://ajwalmart12.github.io/pricing-demand-response/">
           <div class="sndrop-icon" style="background:rgba(99,102,241,.12)">💹</div>
           <div><div class="sndrop-lbl">Pricing & Demand Response</div><div class="sndrop-sub">Elasticity · Lift analysis</div></div>
         </a>
         <div class="sndrop-div"></div>
-        <a class="sndrop-item" href="https://asthaj12.github.io/forecast-accuracy/">
+        <a class="sndrop-item" href="https://ajwalmart12.github.io/forecast-accuracy/">
           <div class="sndrop-icon" style="background:rgba(16,185,129,.12)">🎯</div>
           <div><div class="sndrop-lbl">Forecast Accuracy</div><div class="sndrop-sub">Bias · sMAPE · Planner adjustments</div></div>
         </a>
-        <a class="sndrop-item" href="https://asthaj12.github.io/replenishment-risk/">
+        <a class="sndrop-item" href="https://ajwalmart12.github.io/replenishment-risk/">
           <div class="sndrop-icon" style="background:rgba(244,63,94,.12)">⚡</div>
           <div><div class="sndrop-lbl">Safety Stock Monitor</div><div class="sndrop-sub">Replenishment risk · Violations</div></div>
         </a>
-        <div class="sndrop-div"></div>
-        <a class="sndrop-item" href="https://asthaj12.github.io/shopify-demand-forecasting/">
-          <div class="sndrop-icon" style="background:rgba(16,185,129,.12)">🚚</div>
-          <div><div class="sndrop-lbl">Transportation Forecasting</div><div class="sndrop-sub">SKU velocity · Peak planning</div></div>
-        </a>
-        <a class="sndrop-item" href="https://asthaj12.github.io/logitech-supply-planning/">
-          <div class="sndrop-icon" style="background:rgba(245,158,11,.12)">🏭</div>
-          <div><div class="sndrop-lbl">Global Supply Planning</div><div class="sndrop-sub">Safety stock · S&OP · NPI</div></div>
-        </a>
-        <a class="sndrop-item" href="https://asthaj12.github.io/npi-launch-planning/">
-          <div class="sndrop-icon" style="background:rgba(139,92,246,.12)">🚀</div>
-          <div><div class="sndrop-lbl">NPI Launch Planning</div><div class="sndrop-sub">CTB · EOL · Material readiness</div></div>
-        </a>
       </div>
     </div>
-    <a class="snav-link" href="https://asthaj12.github.io#projects">Projects</a>
-    <a class="snav-link" href="https://asthaj12.github.io#skills">Skills</a>
+    <a class="snav-link" href="https://ajwalmart12.github.io#projects">Projects</a>
+    <a class="snav-link" href="https://ajwalmart12.github.io#skills">Skills</a>
   </div>
   <div class="snav-right">
     <a class="snav-badge" href="https://linkedin.com/in/asthajain12" target="_blank">LinkedIn ↗</a>
-    <a class="snav-badge" href="https://github.com/asthaj12" target="_blank">GitHub ↗</a>
+    <a class="snav-badge" href="https://github.com/ajwalmart12" target="_blank">GitHub ↗</a>
   </div>
 </nav>
 
@@ -393,7 +351,7 @@ canvas { max-width: 100%; }
       </div>
       <div class="ds-item">
         <div class="ds-label">Evidence</div>
-        <div class="ds-val">Network bias improved from material underforecast toward neutral · Intervention win rate 72% · Tens of thousands of weekly exceptions require prioritization</div>
+        <div class="ds-val">Intervention-level win rate analysis using temporal holdout comparison — machine baseline vs. human correction vs. realized demand at store × SKU × day · Network bias improved from material underforecast toward neutral · Intervention win rate 72% · Tens of thousands of weekly exceptions require prioritization</div>
       </div>
       <div class="ds-item">
         <div class="ds-label">Recommendation</div>
@@ -652,7 +610,7 @@ canvas { max-width: 100%; }
 <!-- ── Footer ───────────────────────────────────────────────────── -->
 <footer class="page-footer">
   <span>⚠ All figures are illustrative demo data.</span>
-  <a href="https://asthaj12.github.io" target="_blank">📄 Read the methodology whitepaper →</a>
+  <a href="https://ajwalmart12.github.io" target="_blank">📄 Read the methodology whitepaper →</a>
   <a href="rism_impact_tracker/index.html">Safety Stock Monitor →</a>
   <a href="price_change_tracker/index.html">Price Change Tracker →</a>
   <span style="margin-left:auto">Built by Astha Jain &nbsp;·&nbsp; <a href="https://linkedin.com/in/asthajain12" target="_blank">LinkedIn</a></span>
@@ -906,8 +864,6 @@ new Chart(document.getElementById('riskDistChart'),{
 
 /* ── Item card trend ───────────────────────────────────────────── */
 function renderItemCard() {
-  const prev = Chart.getChart('itemTrendChart');
-  if (prev) prev.destroy();
   mkLine('itemTrendChart', WEEKS, [
     {label:'Final Fcst',data:[4820,4910,5120,5080,5640,5380,5720,5610,5990,5840,5270,5110],borderColor:C.s1,backgroundColor:C.s1+'18',fill:true,borderWidth:2,pointRadius:2,tension:0.3},
     {label:'Actuals',   data:[4490,4620,4810,4790,5310,5190,5480,5330,5700,5590,5050,null],borderColor:C.s2,backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],pointRadius:2,tension:0.3,spanGaps:false},
@@ -923,11 +879,6 @@ document.getElementById('tabNav').addEventListener('click', e=>{
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-  // Defer resize until after browser reflow — charts that rendered while hidden (display:none)
-  // have 0-width canvases and need a layout pass before resize() can read the correct container size
-  requestAnimationFrame(() => {
-    Object.values(Chart.instances).forEach(c=>{ try{ c.resize(); }catch(_){} });
-  });
 });
 </script>
 </body>
