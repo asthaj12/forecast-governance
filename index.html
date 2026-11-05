@@ -1,521 +1,395 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Forecast Governance and Decision Control — Demo</title>
+<meta name="description" content="Forecast override governance demo: exception triage, bias and sMAPE tracking, and item health. Synthetic data with illustrative numbers."/>
+<link rel="canonical" href="https://asthaj12.github.io/forecast-governance/"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='system-ui,Arial,sans-serif' font-size='26' font-weight='800' fill='%23818cf8'%3EAJ%3C/text%3E%3C/svg%3E"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Demand Forecast Override Analytics — Demo"/>
+<meta property="og:description" content="Forecast override governance demo: exception triage, bias and sMAPE tracking, and item health. Synthetic data with illustrative numbers."/>
+<meta property="og:url" content="https://asthaj12.github.io/forecast-governance/"/>
+<meta property="og:image" content="https://asthaj12.github.io/assets/portfolio-share.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Demand Forecast Override Analytics — Demo"/>
+<meta name="twitter:description" content="Forecast override governance demo: exception triage, bias and sMAPE tracking, and item health. Synthetic data with illustrative numbers."/>
+<meta name="twitter:image" content="https://asthaj12.github.io/assets/portfolio-share.png"/>
+<title>Demand Forecast Override Analytics — Demo</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
-/* ── Design tokens ─────────────────────────────────────────────── */
-:root {
-  --surface-0:      #f9f9f7;
-  --surface-1:      #fcfcfb;
-  --text-primary:   #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted:     #898781;
-  --gridline:       #e1e0d9;
-  --baseline:       #c3c2b7;
-  --border:         rgba(11,11,11,0.10);
-  --s1: #6366f1;   /* blue */
-  --s2: #eb6834;   /* orange */
-  --s3: #1baf7a;   /* aqua */
-  --s4: #eda100;   /* yellow */
-  --s5: #e87ba4;   /* magenta */
-  --s6: #008300;   /* green */
-  --s7: #4a3aa7;   /* violet */
-  --s8: #e34948;   /* red */
-  --good:     #0ca30c;
-  --warning:  #fab219;
-  --serious:  #ec835a;
-  --critical: #d03b3b;
-  --demo-bg:  #fffbeb;
-  --demo-border: #f59e0b;
+:root{
+  --s0:#f9f9f7;--s1:#fcfcfb;--ink:#0b0b0b;--sec:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--border:rgba(11,11,11,.10);
+  --blue:#6366f1;--orange:#eb6834;--aqua:#1baf7a;--yellow:#eda100;
+  --pink:#e87ba4;--violet:#4a3aa7;
+  --good:#0ca30c;--warn:#fab219;--crit:#d03b3b;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px;background:var(--s0);color:var(--ink);}
 
-/* ── Reset & base ──────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 13px;
-  background: var(--surface-0);
-  color: var(--text-primary);
-  min-height: 100vh;
-}
+.conf-banner{background:#fff8e1;border-bottom:2px solid var(--yellow);padding:10px 20px;font-size:11px;color:#7c5700;line-height:1.6;}
+.demo-banner{background:#fffbeb;border-bottom:1px solid #f59e0b;padding:7px 20px;font-size:11px;font-weight:600;color:#92400e;}
+.tab-bar{display:flex;padding:0 20px;border-bottom:1px solid var(--grid);background:var(--s0);position:sticky;top:var(--nav-h,48px);z-index:190;overflow-x:auto;scrollbar-width:none;}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab-btn{padding:10px 16px;border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s,border-color .15s;flex-shrink:0;}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+.tab-btn:hover:not(.active){color:var(--ink);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
 
-/* ── Demo banner ───────────────────────────────────────────────── */
-.demo-banner {
-  background: var(--demo-bg);
-  border-bottom: 2px solid var(--demo-border);
-  padding: 8px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #92400e;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.demo-banner .real-scale {
-  margin-left: auto;
-  font-weight: 400;
-  color: #78350f;
-  font-size: 11px;
-}
+main{padding:20px;max-width:1300px;margin:0 auto;}
+.page-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:16px;}
+.page-head .ph-ttl{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.page-head .ph-sub{font-size:12px;color:var(--sec);}
+.back-link{margin-left:auto;font-size:12px;font-weight:600;color:var(--blue);text-decoration:none;white-space:nowrap;}
+.back-link:hover{text-decoration:underline;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:20px;}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+.kpi .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.kpi .val{font-size:21px;font-weight:700;margin:4px 0 2px;color:var(--ink);font-variant-numeric:tabular-nums;}
+.kpi .sub{font-size:11px;color:var(--sec);}
+.kpi .sub.up{color:var(--good);font-weight:600;}
+.kpi .sub.down{color:var(--crit);font-weight:600;}
+.kpi .sub.warn{color:#92400e;font-weight:600;}
+.kpi .sub.neutral{color:var(--muted);}
+.kpi.bl{border-left:3px solid var(--blue);}
+.kpi.or{border-left:3px solid var(--orange);}
+.kpi.gd{border-left:3px solid var(--good);}
+.kpi.yw{border-left:3px solid var(--yellow);}
+.kpi.wn{border-left:3px solid var(--warn);}
+.kpi.cr{border-left:3px solid var(--crit);}
+.kpi.aq{border-left:3px solid var(--aqua);}
+.kpi.vt{border-left:3px solid var(--violet);}
 
-/* ── Top bar ───────────────────────────────────────────────────── */
-.topbar {
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-.brand-logo {
-  width: 32px; height: 32px;
-  background: var(--s1);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 16px; font-weight: 700; flex-shrink: 0;
-}
-.brand-text .title {
-  font-size: 15px; font-weight: 700; color: var(--text-primary);
-}
-.brand-text .subtitle {
-  font-size: 11px; color: var(--text-secondary); margin-top: 1px;
-}
-.meta-strip {
-  margin-left: auto;
-  display: flex; gap: 20px;
-}
-.meta-item { display: flex; flex-direction: column; align-items: flex-end; }
-.meta-item .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
-.meta-item .val { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 1px; }
-.whitepaper-link {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--s1);
-  color: #fff;
-  border: none; border-radius: 5px;
-  padding: 6px 12px;
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; text-decoration: none;
-  flex-shrink: 0;
-}
-.whitepaper-link:hover { background: #4f46e5; }
+.chart-grid{display:grid;gap:16px;margin-bottom:16px;}
+.cols2{grid-template-columns:1fr 1fr;}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.card.full{grid-column:1/-1;}
+.card .ttl{font-size:12px;font-weight:700;margin-bottom:3px;color:var(--ink);}
+.card .sub2{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.cw{position:relative;height:220px;}
+.cw-tall{position:relative;height:280px;}
+.cw-sm{position:relative;height:180px;}
 
-/* ── Tab nav ───────────────────────────────────────────────────── */
-.tab-nav {
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--gridline);
-  padding: 0 20px;
-  display: flex; gap: 2px;
-  overflow-x: auto;
-}
-.tab-btn {
-  padding: 10px 16px;
-  border: none; background: none;
-  font-size: 12px; font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  transition: color .15s, border-color .15s;
-}
-.tab-btn:hover { color: var(--text-secondary); }
-.tab-btn.active { color: var(--s1); border-bottom-color: var(--s1); font-weight: 600; }
+.tbl-wrap{overflow-x:auto;margin-top:4px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--grid);background:var(--s0);}
+td{padding:8px 10px;border-bottom:1px solid var(--grid);color:var(--sec);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f4f3f0;}
 
-/* ── Main content ──────────────────────────────────────────────── */
-main { padding: 20px; max-width: 1400px; margin: 0 auto; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.b-crit{background:#fee2e2;color:var(--crit);}
+.b-warn{background:#fef9c3;color:#92400e;}
+.b-good{background:#dcfce7;color:#166534;}
 
-/* ── KPI row ───────────────────────────────────────────────────── */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.kpi-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-.kpi-card .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
-.kpi-card .kpi-value { font-size: 24px; font-weight: 700; color: var(--text-primary); margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
-.kpi-card .kpi-delta { font-size: 11px; font-weight: 600; }
-.kpi-card .kpi-delta.up   { color: var(--good); }
-.kpi-card .kpi-delta.down { color: var(--critical); }
-.kpi-card .kpi-delta.neutral { color: var(--text-muted); }
-.kpi-card.accent-good  { border-left: 3px solid var(--good); }
-.kpi-card.accent-warn  { border-left: 3px solid var(--warning); }
-.kpi-card.accent-crit  { border-left: 3px solid var(--critical); }
-.kpi-card.accent-blue  { border-left: 3px solid var(--s1); }
+footer{margin-top:32px;padding:16px 20px;border-top:1px solid var(--grid);font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+footer a{color:var(--blue);text-decoration:none;}
+footer a:hover{text-decoration:underline;}
 
-/* ── Chart cards ───────────────────────────────────────────────── */
-.chart-grid { display: grid; gap: 16px; }
-.chart-grid.cols-2 { grid-template-columns: 1fr 1fr; }
-.chart-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-.chart-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
+@media(max-width:900px){
+  .cols2{grid-template-columns:1fr;}
 }
-.chart-card.full { grid-column: 1 / -1; }
-.chart-card .card-title {
-  font-size: 12px; font-weight: 700;
-  color: var(--text-primary); margin-bottom: 4px;
+@media(max-width:480px){
+  .kpi-row{grid-template-columns:1fr 1fr;}
+  main{padding:14px;}
 }
-.chart-card .card-sub {
-  font-size: 11px; color: var(--text-muted); margin-bottom: 14px;
-}
-.chart-card canvas { display: block; max-height: 280px; }
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sec);}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.legend-line{width:18px;height:2px;flex-shrink:0;}
 
-/* ── Legend ────────────────────────────────────────────────────── */
-.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
-.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
-.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.legend-line { width: 18px; height: 2px; flex-shrink: 0; }
+.risk-bar{height:4px;border-radius:2px;background:var(--grid);}
+.risk-bar span{display:block;height:100%;border-radius:2px;}
+.code-tag{background:var(--s0);border:1px solid var(--border);padding:2px 6px;border-radius:3px;font-size:10px;font-family:ui-monospace,Menlo,monospace;}
 
-/* ── Table ─────────────────────────────────────────────────────── */
-.tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--gridline); }
-td { padding: 8px 10px; border-bottom: 1px solid var(--gridline); color: var(--text-secondary); }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: #f4f3f0; }
-.badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 7px; border-radius: 999px;
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-}
-.badge.critical { background: #fee2e2; color: var(--critical); }
-.badge.warning  { background: #fef9c3; color: #92400e; }
-.badge.good     { background: #dcfce7; color: #166534; }
-.risk-bar { height: 4px; border-radius: 2px; background: var(--gridline); }
-.risk-bar span { display: block; height: 100%; border-radius: 2px; }
+.filter-row{margin-bottom:12px;display:flex;gap:10px;align-items:center;}
+.filter-row select{padding:6px 10px;border:1px solid var(--grid);border-radius:5px;font-size:12px;color:var(--ink);background:var(--s1);}
+.filter-row .count{margin-left:auto;font-size:11px;color:var(--muted);}
 
-/* ── Item lookup ────────────────────────────────────────────────── */
-.lookup-wrap { display: flex; flex-direction: column; gap: 14px; }
-.search-row { display: flex; gap: 10px; }
-.search-row input {
-  flex: 1; padding: 8px 12px; border: 1px solid var(--gridline);
-  border-radius: 6px; font-size: 12px; color: var(--text-primary);
-  background: var(--surface-1);
-}
-.search-row input:focus { outline: 2px solid var(--s1); border-color: transparent; }
-.search-row button {
-  padding: 8px 16px; background: var(--s1); color: #fff;
-  border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
-}
-.item-card {
-  background: var(--surface-1); border: 1px solid var(--border);
-  border-radius: 8px; padding: 16px;
-}
-.item-card .item-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-.item-card .item-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
-.item-stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-.item-stat { background: var(--surface-0); border-radius: 6px; padding: 10px 12px; }
-.item-stat .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
-.item-stat .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.decision-block{background:var(--s1);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:8px;padding:18px;margin-bottom:20px;}
+.decision-block .db-ttl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;}
+.decision-block p{font-size:12px;color:var(--sec);line-height:1.7;}
+.ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;}
+.ds-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);font-weight:700;margin-bottom:3px;}
+.ds-val{font-size:12px;color:var(--sec);line-height:1.7;}
 
-/* ── Footer ─────────────────────────────────────────────────────── */
-.page-footer {
-  margin-top: 40px; padding: 20px;
-  border-top: 1px solid var(--gridline);
-  font-size: 11px; color: var(--text-muted);
-  display: flex; align-items: center; gap: 16px;
-}
-.page-footer a { color: var(--s1); text-decoration: none; }
-.page-footer a:hover { text-decoration: underline; }
+.lookup-wrap{display:flex;flex-direction:column;gap:16px;}
+.search-row{display:flex;gap:10px;}
+.search-row input{flex:1;padding:8px 12px;border:1px solid var(--grid);border-radius:6px;font-size:12px;color:var(--ink);background:var(--s1);}
+.search-row input:focus{outline:2px solid var(--blue);border-color:transparent;}
+.search-row button{padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+.item-name{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.item-meta{font-size:11px;color:var(--muted);margin-bottom:14px;}
+.item-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.item-stat{background:var(--s0);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.item-stat .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.item-stat .val{font-size:16px;font-weight:700;margin-top:2px;color:var(--ink);}
 
-/* ── Confidentiality banner ─────────────────────────────────────── */
-.confidentiality-banner {
-  background: #f1f5f9;
-  border-bottom: 1px solid #cbd5e1;
-  padding: 10px 32px;
-  font-size: 11px;
-  color: #475569;
-  text-align: center;
-}
+.assumptions{background:#f8f7f4;border:1px solid var(--grid);border-radius:8px;padding:14px 16px;margin-top:16px;}
+.assumptions .a-ttl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;}
+.assumptions ul{font-size:11px;color:var(--sec);line-height:1.8;padding-left:16px;}
 
-/* ── Decision summary ────────────────────────────────────────────── */
-.decision-summary {
-  border-left: 3px solid #6366f1;
-  background: #f8f9ff;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+@media(max-width:768px){
+  .item-stat-row{grid-template-columns:1fr 1fr;}
+  .ds-grid{grid-template-columns:1fr;}
 }
-.ds-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.ds-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: #6366f1;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-.ds-val {
-  font-size: 13px;
-  color: #0b0b0b;
-  line-height: 1.5;
-}
-
-/* ── Assumptions box ────────────────────────────────────────────── */
-.assumptions-box {
-  background: #f4f3f0;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 20px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.assumptions-box strong {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-.assumptions-box ul {
-  padding-left: 18px;
-}
-.assumptions-box li {
-  margin-bottom: 4px;
-  line-height: 1.5;
-}
-
-@media (max-width: 600px) {
-  .ds-grid { grid-template-columns: 1fr; }
-}
-
-/* ── Responsive ─────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  .chart-grid.cols-2, .chart-grid.cols-3 { grid-template-columns: 1fr; }
-  .meta-strip { display: none; }
-  .item-stat-row { grid-template-columns: 1fr 1fr; }
+:root{--nav-h:48px;}
+.snav{position:sticky;top:0;z-index:200;background:rgba(249,249,247,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;min-height:48px;}
+.snav ul{list-style:none;margin:0;padding:0;}
+.snav-brand{font-size:13px;font-weight:800;color:#0f172a;text-decoration:none;margin-right:16px;white-space:nowrap;}
+.snav-brand span{color:var(--blue);}
+.snav-menu,.snav-items,.snav-right{display:flex;align-items:center;gap:2px;}
+.snav-items{flex:1;min-width:0;}
+.snav-right{margin-left:auto;gap:6px;flex-shrink:0;}
+.snav-link,#snDrop>summary{display:flex;align-items:center;min-height:32px;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:500;color:#475569;text-decoration:none;white-space:nowrap;transition:background .12s,color .12s;}
+.sndrop{position:relative;}
+#snDrop>summary{cursor:pointer;user-select:none;gap:4px;list-style:none;}
+#snDrop>summary::-webkit-details-marker{display:none;}
+.snav-link:hover,#snDrop>summary:hover,#snDrop[open]>summary{background:rgba(99,102,241,.07);color:#0f172a;}
+#snDrop>summary svg{width:9px;height:9px;flex-shrink:0;transition:transform .18s;}
+#snDrop[open]>summary svg{transform:rotate(180deg);}
+.sndrop-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:210;width:300px;max-width:calc(100vw - 24px);max-height:min(70vh,520px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px;box-shadow:0 12px 40px rgba(0,0,0,.14);}
+.sndrop-gh{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;padding:8px 10px 3px;}
+.sndrop-grp+.sndrop-grp{margin-top:4px;border-top:1px solid #e2e8f0;}
+.sndrop-item{display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:500;color:#475569;text-decoration:none;transition:background .1s,color .1s;}
+.sndrop-item:hover,.sndrop-item[aria-current]{background:rgba(99,102,241,.09);color:#0f172a;}
+.sndrop-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.sndrop-lbl{font-weight:600;color:#0f172a;font-size:11px;}
+.sndrop-sub{font-size:10px;color:#94a3b8;margin-top:1px;}
+.snav-badge{display:flex;align-items:center;min-height:32px;padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;color:#475569;text-decoration:none;white-space:nowrap;transition:border-color .12s,color .12s,background .12s;}
+.snav-badge:hover{background:#eef2ff;border-color:#6366f1;color:#6366f1;}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.tab-bar,.tab-nav{position:sticky;top:var(--nav-h,48px);z-index:190;}
+main,.tab-pane,.card{min-width:0;}
+@media (max-width:600px){
+:root{--nav-h:96px;}
+.snav{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:6px 12px;}
+.snav-brand{grid-column:1;grid-row:1;justify-self:start;margin:0;display:flex;align-items:center;min-height:40px;}
+.snav-menu{grid-column:2;grid-row:1;justify-self:end;}
+.sndrop{position:static;}
+.sndrop-menu{left:12px;right:12px;width:auto;max-width:none;}
+.snav-items{grid-column:1;grid-row:2;justify-self:start;flex:none;}
+.snav-right{grid-column:2;grid-row:2;justify-self:end;margin-left:0;}
+.snav-link,#snDrop>summary,.snav-badge,.tab-btn{min-height:40px;}
+.tab-bar,.tab-nav{padding-left:12px;padding-right:12px;}
+main{padding:14px;}
 }
 </style>
 </head>
 <body>
 
-<div class="confidentiality-banner">
+<nav class="snav" aria-label="Portfolio and dashboard navigation">
+  <a href="https://asthaj12.github.io/" class="snav-brand">AJ<span> · Portfolio</span></a>
+  <ul class="snav-menu">
+    <li class="sndrop">
+      <details id="snDrop">
+        <summary>Dashboards<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" focusable="false"><path d="M2 3.5l3 3 3-3"/></svg></summary>
+        <div class="sndrop-menu">
+          <div class="sndrop-grp">
+            <p class="sndrop-gh">Capacity &amp; Supply</p>
+            <ul>
+            <li><a class="sndrop-item" href="https://asthaj12.github.io/ai-customer-strategy-lab/"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">🧭</div><div><div class="sndrop-lbl">Cloud AI Strategy Lab</div><div class="sndrop-sub">Long-tail AI customers · Unit economics · Capacity pooling</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/cummins-capacity-expansion/"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">📈</div><div><div class="sndrop-lbl">Long-Range Capacity Planning</div><div class="sndrop-sub">Long-range planning · $12M protected · 15+ lines</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/cummins-capacity-risk/"><div class="sndrop-icon" style="background:rgba(235,104,52,.13)">🏭</div><div><div class="sndrop-lbl">Cummins Capacity &amp; Risk</div><div class="sndrop-sub">Supplier risk · Recovery · $35M averted</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/npi-launch-planning/"><div class="sndrop-icon" style="background:rgba(235,104,52,.13)">🚀</div><div><div class="sndrop-lbl">NPI Launch Planning</div><div class="sndrop-sub">New product intro · Supply readiness</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/replenishment-risk/"><div class="sndrop-icon" style="background:rgba(237,161,0,.12)">📦</div><div><div class="sndrop-lbl">Safety Stock Monitor</div><div class="sndrop-sub">Violation monitor · Risk items</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/logitech-supply-planning/"><div class="sndrop-icon" style="background:rgba(235,104,52,.13)">🌐</div><div><div class="sndrop-lbl">Global S&amp;OP</div><div class="sndrop-sub">Gaming E&amp;O · Supply disruption · Decision forum</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/shopify-demand-forecasting/"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">🔀</div><div><div class="sndrop-lbl">Network Demand Planning</div><div class="sndrop-sub">Network overview · Forecast RCA · BFCM peak</div></div></a></li>
+            </ul>
+          </div>
+          <div class="sndrop-grp">
+            <p class="sndrop-gh">Forecasting &amp; Decisions</p>
+            <ul>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/forecast-governance/" aria-current="page"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">📊</div><div><div class="sndrop-lbl">Forecast Governance</div><div class="sndrop-sub">Anomaly triage · Bias correction</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/fom-backtesting/"><div class="sndrop-icon" style="background:rgba(27,175,122,.12)">🧪</div><div><div class="sndrop-lbl">FOM Backtesting</div><div class="sndrop-sub">Model validation · Historical accuracy</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/forecast-accuracy/"><div class="sndrop-icon" style="background:rgba(27,175,122,.12)">📉</div><div><div class="sndrop-lbl">Forecast Accuracy</div><div class="sndrop-sub">Period recap · Bias by category · Planner adjustments</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/seasonal-event-intelligence/"><div class="sndrop-icon" style="background:rgba(237,161,0,.12)">🎯</div><div><div class="sndrop-lbl">Seasonal Event Intelligence</div><div class="sndrop-sub">Event lift · Demand signals</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/seasonal-planning/"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">📅</div><div><div class="sndrop-lbl">Scenario Planning</div><div class="sndrop-sub">Scenario dashboard · Planning calendar · Risk flags</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/pricing-demand-response/"><div class="sndrop-icon" style="background:rgba(232,123,164,.14)">💲</div><div><div class="sndrop-lbl">Pricing &amp; Demand Response</div><div class="sndrop-sub">Elasticity &amp; lift · Price event tracking</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/fifa-2026-demand/"><div class="sndrop-icon" style="background:rgba(27,175,122,.12)">⚽</div><div><div class="sndrop-lbl">FIFA Demand</div><div class="sndrop-sub">Host city proximity · Team affinity · Staged commitment</div></div></a></li>
+              <li><a class="sndrop-item" href="https://asthaj12.github.io/snap-monitoring/"><div class="sndrop-icon" style="background:rgba(99,102,241,.12)">📜</div><div><div class="sndrop-lbl">Policy Demand Signals</div><div class="sndrop-sub">Test &amp; control · Demand signal · Hypothesis testing</div></div></a></li>
+            </ul>
+          </div>
+        </div>
+      </details>
+    </li>
+  </ul>
+  <ul class="snav-items">
+    <li><a class="snav-link" href="https://asthaj12.github.io/#projects">Projects</a></li>
+    <li><a class="snav-link" href="https://asthaj12.github.io/#skills">Skills</a></li>
+  </ul>
+  <ul class="snav-right">
+    <li><a class="snav-badge" href="https://linkedin.com/in/asthajain12" target="_blank" rel="noopener">LinkedIn ↗</a></li>
+    <li><a class="snav-badge" href="https://github.com/asthaj12" target="_blank" rel="noopener">GitHub ↗</a></li>
+  </ul>
+</nav>
+<script>
+(function(){
+var nav=document.querySelector('.snav');
+var dd=document.getElementById('snDrop');
+function setNavH(){document.documentElement.style.setProperty('--nav-h',nav.offsetHeight+'px');}
+if(window.ResizeObserver){new ResizeObserver(setNavH).observe(nav);}else{setNavH();window.addEventListener('resize',setNavH);}
+dd.addEventListener('focusout',function(e){if(e.relatedTarget&&!dd.contains(e.relatedTarget)){dd.open=false;}});
+document.addEventListener('pointerdown',function(e){if(dd.open&&!dd.contains(e.target)){dd.open=false;}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&dd.open){dd.open=false;dd.querySelector('summary').focus();}});
+})();
+</script>
+
+<div class="conf-banner">
   <strong>Independent portfolio case study.</strong> All data, company names, product identifiers, operating assumptions and results shown here are synthetic or materially transformed. This project does not reproduce any employer's data, systems, models or confidential business processes.
 </div>
+<div class="demo-banner">⚠ DEMO DATA — Illustrative numbers only. Synthetic demo · Multi-billion-unit scale · National network of locations · Tens of thousands of weekly signals</div>
 
-<!-- ── Demo banner ────────────────────────────────────────────── -->
-<div class="demo-banner">
-  <span>⚠ DEMO DATA — Illustrative numbers only.</span>
-  <span class="real-scale">Synthetic demo · Multi-billion-unit scale · National network of locations · Tens of thousands of weekly signals</span>
-</div>
-
-<!-- ── Top bar ─────────────────────────────────────────────────── -->
-<header class="topbar">
-  <div class="brand-logo">R</div>
-  <div class="brand-text">
-    <div class="title">Forecast Governance and Decision Control</div>
-    <div class="subtitle">Prioritizing forecast exceptions, evaluating planning interventions and directing attention toward the highest-impact risks. &nbsp;·&nbsp; Perishable &amp; packaged goods category</div>
-  </div>
-  <div class="meta-strip">
-    <div class="meta-item"><span class="lbl">Mode</span><span class="val">Demo</span></div>
-    <div class="meta-item"><span class="lbl">Window</span><span class="val">Wk 1–12</span></div>
-    <div class="meta-item"><span class="lbl">SKUs</span><span class="val">2,400</span></div>
-    <div class="meta-item"><span class="lbl">Stores</span><span class="val">150</span></div>
-  </div>
-  <a href="../whitepaper.html" class="whitepaper-link" target="_blank">📄 Methodology</a>
-</header>
-
-<!-- ── Tab nav ─────────────────────────────────────────────────── -->
-<nav class="tab-nav" id="tabNav">
+<div class="tab-bar" id="tabBar">
   <button class="tab-btn active" data-tab="overview">Overview</button>
   <button class="tab-btn" data-tab="waterfall">Waterfall</button>
   <button class="tab-btn" data-tab="accuracy">Bias &amp; sMAPE</button>
   <button class="tab-btn" data-tab="exceptions">Exceptions</button>
   <button class="tab-btn" data-tab="item-health">Item Health</button>
-</nav>
+</div>
 
-<!-- ── Content ─────────────────────────────────────────────────── -->
 <main>
 
-  <!-- ── Decision Summary ─────────────────────────────────────── -->
-  <div class="decision-summary">
-    <div class="ds-grid">
-      <div class="ds-item">
-        <div class="ds-label">Decision</div>
-        <div class="ds-val">Which forecast exceptions require immediate planning intervention?</div>
-      </div>
-      <div class="ds-item">
-        <div class="ds-label">Evidence</div>
-        <div class="ds-val">Network bias improved from material underforecast toward neutral · Intervention win rate 72% · Tens of thousands of weekly exceptions require prioritization</div>
-      </div>
-      <div class="ds-item">
-        <div class="ds-label">Recommendation</div>
-        <div class="ds-val">Focus planning effort on high-risk, high-volume exceptions first; governance rules prevent low-value overrides</div>
-      </div>
-      <div class="ds-item">
-        <div class="ds-label">Primary Risk</div>
-        <div class="ds-val">Model cannot distinguish demand signal from noise for new or highly volatile products</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Overview ──────────────────────────────────────────────── -->
-  <div id="tab-overview" class="tab-panel active">
+  <div class="tab-pane active" id="tab-overview">
     <div class="kpi-row">
-      <div class="kpi-card accent-blue">
-        <div class="kpi-label">Active SKUs</div>
-        <div class="kpi-value">2,400</div>
-        <div class="kpi-delta neutral">Tracked this week</div>
-      </div>
-      <div class="kpi-card accent-blue">
-        <div class="kpi-label">Active Stores</div>
-        <div class="kpi-value">150</div>
-        <div class="kpi-delta neutral">All channels</div>
-      </div>
-      <div class="kpi-card accent-warn">
-        <div class="kpi-label">Network Bias</div>
-        <div class="kpi-value">−2.1%</div>
-        <div class="kpi-delta up">▲ from −8.2% (12 wks)</div>
-      </div>
-      <div class="kpi-card accent-warn">
-        <div class="kpi-label">Network sMAPE</div>
-        <div class="kpi-value">17.2%</div>
-        <div class="kpi-delta up">▲ from 22.1% (12 wks)</div>
-      </div>
-      <div class="kpi-card accent-crit">
-        <div class="kpi-label">Flagged Overrides</div>
-        <div class="kpi-value">$4.2M</div>
-        <div class="kpi-delta down">38 items need review</div>
-      </div>
-      <div class="kpi-card accent-good">
-        <div class="kpi-label">In-Stock %</div>
-        <div class="kpi-value">94.2%</div>
-        <div class="kpi-delta up">▲ 1.1pp vs. LY</div>
-      </div>
+      <div class="kpi bl"><div class="lbl">Active SKUs</div><div class="val">2,400</div><div class="sub neutral">Tracked this week</div></div>
+      <div class="kpi bl"><div class="lbl">Active Stores</div><div class="val">150</div><div class="sub neutral">All channels</div></div>
+      <div class="kpi wn"><div class="lbl">Network Bias</div><div class="val">−2.1%</div><div class="sub up">▲ from −8.2% (12 wks)</div></div>
+      <div class="kpi wn"><div class="lbl">Network sMAPE</div><div class="val">17.2%</div><div class="sub up">▲ from 22.1% (12 wks)</div></div>
+      <div class="kpi cr"><div class="lbl">Flagged Overrides</div><div class="val">$4.2M</div><div class="sub down">38 items need review</div></div>
+      <div class="kpi gd"><div class="lbl">In-Stock %</div><div class="val">94.2%</div><div class="sub up">▲ 1.1pp vs. LY</div></div>
     </div>
 
-    <div class="chart-grid cols-2">
-      <div class="chart-card full">
-        <div class="card-title">Network Forecast vs. Actuals — Weekly (Units, M)</div>
-        <div class="card-sub">System forecast · Final forecast after adjustments · Realized demand</div>
+    <div class="chart-grid cols2">
+      <div class="card full">
+        <div class="ttl">Network Forecast vs. Actuals — Weekly (Units, M)</div>
+        <div class="sub2">System forecast · Final forecast after adjustments · Realized demand</div>
         <div class="legend">
-          <span class="legend-item"><span class="legend-line" style="background:var(--s1)"></span>System Forecast</span>
-          <span class="legend-item"><span class="legend-line" style="background:var(--s3)"></span>Final Forecast</span>
-          <span class="legend-item"><span class="legend-line" style="background:var(--s2);border-style:dashed"></span>Actuals</span>
+          <span class="legend-item"><span class="legend-line" style="background:var(--blue)"></span>System Forecast</span>
+          <span class="legend-item"><span class="legend-line" style="background:var(--aqua)"></span>Final Forecast</span>
+          <span class="legend-item"><span class="legend-line" style="background:var(--orange)"></span>Actuals</span>
         </div>
-        <canvas id="overviewLineChart" height="80"></canvas>
+        <div class="cw-tall"><canvas id="overviewLineChart"></canvas></div>
       </div>
 
-      <div class="chart-card">
-        <div class="card-title">Override Volume by Reason Code — This Week</div>
-        <div class="card-sub">Relative share of manual adjustments by category</div>
-        <canvas id="overridePieChart" height="200"></canvas>
+      <div class="card">
+        <div class="ttl">Override Volume by Reason Code — This Week</div>
+        <div class="sub2">Relative share of manual adjustments by category</div>
+        <div class="cw-tall"><canvas id="overridePieChart"></canvas></div>
       </div>
 
-      <div class="chart-card">
-        <div class="card-title">Weekly Anomaly Triage — Priority Queue</div>
-        <div class="card-sub">Exceptions resolved vs. open vs. escalated</div>
+      <div class="card">
+        <div class="ttl">Weekly Anomaly Triage — Priority Queue</div>
+        <div class="sub2">Exceptions resolved vs. open vs. escalated</div>
         <div class="legend">
           <span class="legend-item"><span class="legend-dot" style="background:var(--good)"></span>Resolved</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>Open</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--critical)"></span>Escalated</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--warn)"></span>Open</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--crit)"></span>Escalated</span>
         </div>
-        <canvas id="triagedBarChart" height="200"></canvas>
+        <div class="cw"><canvas id="triagedBarChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="decision-block">
+      <div class="db-ttl">Decision Summary</div>
+      <div class="ds-grid">
+        <div class="ds-item">
+          <div class="ds-label">Decision</div>
+          <div class="ds-val">Which forecast exceptions require immediate planning intervention?</div>
+        </div>
+        <div class="ds-item">
+          <div class="ds-label">Evidence</div>
+          <div class="ds-val">Intervention-level win rate analysis using temporal holdout comparison — machine baseline vs. human correction vs. realized demand at store × SKU × day · Network bias improved from material underforecast toward neutral · Intervention win rate 72% · Tens of thousands of weekly exceptions require prioritization</div>
+        </div>
+        <div class="ds-item">
+          <div class="ds-label">Recommendation</div>
+          <div class="ds-val">Focus planning effort on high-risk, high-volume exceptions first; governance rules prevent low-value overrides</div>
+        </div>
+        <div class="ds-item">
+          <div class="ds-label">Primary Risk</div>
+          <div class="ds-val">Model cannot distinguish demand signal from noise for new or highly volatile products</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ── Waterfall ─────────────────────────────────────────────── -->
-  <div id="tab-waterfall" class="tab-panel">
+  <div class="tab-pane" id="tab-waterfall">
     <div class="chart-grid">
-      <div class="chart-card full">
-        <div class="card-title">Forecast Composition Waterfall — Weekly (Units, M)</div>
-        <div class="card-sub">System base + adjustment layers → Final Forecast. Actuals shown as overlay.</div>
+      <div class="card full">
+        <div class="ttl">Forecast Composition Waterfall — Weekly (Units, M)</div>
+        <div class="sub2">System base + adjustment layers → Final Forecast. Actuals shown as overlay.</div>
         <div class="legend">
-          <span class="legend-item"><span class="legend-dot" style="background:var(--s1)"></span>System Forecast</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--s3)"></span>Review Adj</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--s4)"></span>Planner Adj</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--s5)"></span>Event Adj</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--s7)"></span>Other Adj</span>
-          <span class="legend-item"><span class="legend-line" style="background:var(--s2)"></span>Actuals</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span>System Forecast</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--aqua)"></span>Review Adj</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--yellow)"></span>Planner Adj</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span>Event Adj</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--violet)"></span>Other Adj</span>
+          <span class="legend-item"><span class="legend-line" style="background:var(--orange)"></span>Actuals</span>
         </div>
-        <canvas id="waterfallChart" height="70"></canvas>
+        <div class="cw-tall"><canvas id="waterfallChart"></canvas></div>
       </div>
 
-      <div class="chart-card full">
-        <div class="card-title">Override &amp; Adjustment Value — Cumulative (Units, M)</div>
-        <div class="card-sub">Total human-applied lift versus system baseline over the 12-week window</div>
-        <canvas id="adjCumChart" height="60"></canvas>
+      <div class="card full">
+        <div class="ttl">Override &amp; Adjustment Value — Cumulative (Units, M)</div>
+        <div class="sub2">Total human-applied lift versus system baseline over the 12-week window</div>
+        <div class="cw"><canvas id="adjCumChart"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Accuracy ──────────────────────────────────────────────── -->
-  <div id="tab-accuracy" class="tab-panel">
+  <div class="tab-pane" id="tab-accuracy">
     <div class="kpi-row">
-      <div class="kpi-card accent-good">
-        <div class="kpi-label">Current Bias</div>
-        <div class="kpi-value">−2.1%</div>
-        <div class="kpi-delta up">▲ 6.1pp vs. 12 wks ago</div>
-      </div>
-      <div class="kpi-card accent-warn">
-        <div class="kpi-label">Current sMAPE</div>
-        <div class="kpi-value">17.2%</div>
-        <div class="kpi-delta up">▲ 4.9pp improvement</div>
-      </div>
-      <div class="kpi-card accent-good">
-        <div class="kpi-label">Hit Rate (±15%)</div>
-        <div class="kpi-value">68.4%</div>
-        <div class="kpi-delta up">▲ from 52.1%</div>
-      </div>
-      <div class="kpi-card accent-blue">
-        <div class="kpi-label">Bias Corrected</div>
-        <div class="kpi-value">Near-0</div>
-        <div class="kpi-delta up">Structural fix applied</div>
-      </div>
+      <div class="kpi gd"><div class="lbl">Current Bias</div><div class="val">−2.1%</div><div class="sub up">▲ 6.1pp vs. 12 wks ago</div></div>
+      <div class="kpi wn"><div class="lbl">Current sMAPE</div><div class="val">17.2%</div><div class="sub up">▲ 4.9pp improvement</div></div>
+      <div class="kpi gd"><div class="lbl">Hit Rate (±15%)</div><div class="val">68.4%</div><div class="sub up">▲ from 52.1%</div></div>
+      <div class="kpi bl"><div class="lbl">Bias Corrected</div><div class="val">Near-0</div><div class="sub up">Structural fix applied</div></div>
     </div>
 
-    <div class="chart-grid cols-2">
-      <div class="chart-card full">
-        <div class="card-title">Network Bias — Weekly Trend (%)</div>
-        <div class="card-sub">Positive = over-forecast. Negative = under-forecast. Target: −2% to +2%.</div>
-        <canvas id="biasChart" height="80"></canvas>
+    <div class="chart-grid cols2">
+      <div class="card full">
+        <div class="ttl">Network Bias — Weekly Trend (%)</div>
+        <div class="sub2">Positive = over-forecast. Negative = under-forecast. Target: −2% to +2%.</div>
+        <div class="cw-tall"><canvas id="biasChart"></canvas></div>
       </div>
-      <div class="chart-card">
-        <div class="card-title">sMAPE by Week (%)</div>
-        <div class="card-sub">Lower is better. Symmetric mean absolute percentage error.</div>
-        <canvas id="smapeChart" height="220"></canvas>
+      <div class="card">
+        <div class="ttl">sMAPE by Week (%)</div>
+        <div class="sub2">Lower is better. Symmetric mean absolute percentage error.</div>
+        <div class="cw"><canvas id="smapeChart"></canvas></div>
       </div>
-      <div class="chart-card">
-        <div class="card-title">Hit Rate ±15% — Weekly (%)</div>
-        <div class="card-sub">% of SKU-store combinations within 15% of actuals</div>
-        <canvas id="hitRateChart" height="220"></canvas>
+      <div class="card">
+        <div class="ttl">Hit Rate ±15% — Weekly (%)</div>
+        <div class="sub2">% of SKU-store combinations within 15% of actuals</div>
+        <div class="cw"><canvas id="hitRateChart"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Exceptions ────────────────────────────────────────────── -->
-  <div id="tab-exceptions" class="tab-panel">
-    <div class="chart-grid">
-      <div class="chart-card full">
-        <div class="card-title">Override Risk Flagging — Anomalous Manual Adjustments</div>
-        <div class="card-sub">Overrides flagged by governance engine. Sorted by risk composite score. The synthetic example demonstrates how high-risk interventions can be prioritized for review.</div>
+  <div class="tab-pane" id="tab-exceptions">
+    <div class="chart-grid cols2">
+      <div class="card full">
+        <div class="ttl">Override Risk Flagging — Anomalous Manual Adjustments</div>
+        <div class="sub2">Overrides flagged by governance engine. Sorted by risk composite score. The synthetic example demonstrates how high-risk interventions can be prioritized for review.</div>
 
-        <div style="margin-bottom: 12px; display: flex; gap: 10px; align-items: center;">
-          <select style="padding: 6px 10px; border: 1px solid var(--gridline); border-radius: 5px; font-size: 12px; color: var(--text-primary); background: var(--surface-1);">
+        <div class="filter-row">
+          <select>
             <option>All Reason Codes</option>
             <option>Model Correction</option>
             <option>PROMO</option>
             <option>EVENT</option>
             <option>Review Team</option>
           </select>
-          <select style="padding: 6px 10px; border: 1px solid var(--gridline); border-radius: 5px; font-size: 12px; color: var(--text-primary); background: var(--surface-1);">
+          <select>
             <option>All Risk Levels</option>
             <option>Critical</option>
             <option>Warning</option>
             <option>Low</option>
           </select>
-          <span style="margin-left: auto; font-size: 11px; color: var(--text-muted);">38 items requiring review</span>
+          <span class="count">38 items requiring review</span>
         </div>
 
         <div class="tbl-wrap">
@@ -536,83 +410,76 @@ tr:hover td { background: #f4f3f0; }
         </div>
       </div>
 
-      <div class="chart-card">
-        <div class="card-title">Override Value by Reason Code — Last 4 Weeks</div>
-        <div class="card-sub">Stacked by category. Target: minimize Model Correction and unjustified OTHER.</div>
-        <canvas id="excStackChart" height="220"></canvas>
+      <div class="card">
+        <div class="ttl">Override Value by Reason Code — Last 4 Weeks</div>
+        <div class="sub2">Stacked by category. Target: minimize Model Correction and unjustified OTHER.</div>
+        <div class="cw-tall"><canvas id="excStackChart"></canvas></div>
       </div>
 
-      <div class="chart-card">
-        <div class="card-title">Risk Distribution — Flagged Items</div>
-        <div class="card-sub">Count of flagged overrides by risk tier this week</div>
-        <canvas id="riskDistChart" height="220"></canvas>
+      <div class="card">
+        <div class="ttl">Risk Distribution — Flagged Items</div>
+        <div class="sub2">Count of flagged overrides by risk tier this week</div>
+        <div class="cw-tall"><canvas id="riskDistChart"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ── Item Health ────────────────────────────────────────────── -->
-  <div id="tab-item-health" class="tab-panel">
+  <div class="tab-pane" id="tab-item-health">
     <div class="lookup-wrap">
-      <div class="chart-card">
-        <div class="card-title">Item Health Lookup</div>
-        <div class="card-sub">Search by SKU ID or description to view item-level forecast performance</div>
+      <div class="card">
+        <div class="ttl">Item Health Lookup</div>
+        <div class="sub2">Search by SKU ID or description to view item-level forecast performance</div>
         <div class="search-row">
           <input type="text" id="itemSearch" placeholder="e.g. SKU-48291 or 'organic milk'" value="SKU-48291"/>
           <button onclick="renderItemCard()">Look up</button>
         </div>
       </div>
 
-      <div class="item-card" id="itemCard">
+      <div class="card" id="itemCard">
         <div class="item-name">Organic Whole Milk, 1 Gallon</div>
         <div class="item-meta">SKU-48291 &nbsp;·&nbsp; Fresh Dairy &nbsp;·&nbsp; Dept 12 &nbsp;·&nbsp; 142 stores tracked &nbsp;·&nbsp; indirect channel</div>
         <div class="item-stat-row">
-          <div class="item-stat">
-            <div class="lbl">Item Bias</div>
-            <div class="val" style="color:var(--warning)">−6.8%</div>
-          </div>
-          <div class="item-stat">
-            <div class="lbl">sMAPE</div>
-            <div class="val">19.4%</div>
-          </div>
-          <div class="item-stat">
-            <div class="lbl">In-Stock %</div>
-            <div class="val" style="color:var(--good)">96.1%</div>
-          </div>
-          <div class="item-stat">
-            <div class="lbl">Weekly Velocity</div>
-            <div class="val">4,820 u/str</div>
-          </div>
+          <div class="item-stat"><div class="lbl">Item Bias</div><div class="val" style="color:#b47d00">−6.8%</div></div>
+          <div class="item-stat"><div class="lbl">sMAPE</div><div class="val">19.4%</div></div>
+          <div class="item-stat"><div class="lbl">In-Stock %</div><div class="val" style="color:var(--good)">96.1%</div></div>
+          <div class="item-stat"><div class="lbl">Weekly Velocity</div><div class="val">4,820 u/str</div></div>
         </div>
-        <canvas id="itemTrendChart" height="60"></canvas>
+        <div class="cw"><canvas id="itemTrendChart"></canvas></div>
       </div>
     </div>
   </div>
 
+  <div class="assumptions">
+    <div class="a-ttl">Assumptions &amp; Limitations</div>
+    <ul>
+      <li>All data is synthetically generated and does not reflect any employer's systems or results.</li>
+      <li>Priority scoring uses a simplified fictional formula; production systems use more complex rules.</li>
+      <li>Model cannot automatically distinguish signal from noise for volatile or new products.</li>
+      <li>Intervention effectiveness measured on a synthetic holdout; real-world win rates vary.</li>
+      <li>Dashboard supports planning decisions but does not execute them automatically.</li>
+    </ul>
+  </div>
+
 </main>
 
-<!-- ── Assumptions & Limitations ────────────────────────────────── -->
-<div class="assumptions-box">
-  <strong>Assumptions & Limitations</strong>
-  <ul>
-    <li>All data is synthetically generated and does not reflect any employer's systems or results.</li>
-    <li>Priority scoring uses a simplified fictional formula; production systems use more complex rules.</li>
-    <li>Model cannot automatically distinguish signal from noise for volatile or new products.</li>
-    <li>Intervention effectiveness measured on a synthetic holdout; real-world win rates vary.</li>
-    <li>Dashboard supports planning decisions but does not execute them automatically.</li>
-  </ul>
-</div>
-
-<!-- ── Footer ───────────────────────────────────────────────────── -->
-<footer class="page-footer">
-  <span>⚠ All figures are illustrative demo data.</span>
-  <a href="../whitepaper.html" target="_blank">📄 Read the methodology whitepaper →</a>
+<footer>
+  <span>Built by <strong>Astha Jain</strong></span>
+  <a href="https://linkedin.com/in/asthajain12" target="_blank" rel="noopener">LinkedIn ↗</a>
+  <a href="https://github.com/asthaj12" target="_blank" rel="noopener">GitHub ↗</a>
+  <a href="https://asthaj12.github.io/" target="_blank" rel="noopener">Portfolio ↗</a>
+  <a href="mailto:asthajain.sc@gmail.com">Email</a>
   <a href="rism_impact_tracker/index.html">Safety Stock Monitor →</a>
   <a href="price_change_tracker/index.html">Price Change Tracker →</a>
-  <span style="margin-left:auto">Built by Astha Jain &nbsp;·&nbsp; <a href="https://linkedin.com/in/ajwalmart12" target="_blank">LinkedIn</a></span>
+  <span style="margin-left:auto;color:var(--muted)">⚠ All figures are illustrative demo data.</span>
 </footer>
 
 <script>
-/* ── Data ──────────────────────────────────────────────────────── */
+Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI",sans-serif';
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#898781';
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 12;
+
 const WEEKS = ["Wk 1","Wk 2","Wk 3","Wk 4","Wk 5","Wk 6","Wk 7","Wk 8","Wk 9","Wk 10","Wk 11","Wk 12"];
 const SYS   = [14.2, 13.8, 15.1, 14.6, 16.2, 15.8, 17.3, 16.9, 18.1, 17.6, 15.2, 14.8];
 const FOM   = [0.30, 0.40, 0.20, 0.50, 0.60, 0.30, 0.40, 0.70, 0.50, 0.40, 0.30, 0.20];
@@ -626,15 +493,15 @@ const SMAPE = [22.1, 21.3, 20.8, 19.9, 19.2, 18.8, 18.4, 18.1, 17.9, 17.6, 17.2,
 const HITR  = [52.1, 53.4, 55.2, 57.0, 58.8, 60.3, 62.1, 63.9, 65.4, 66.8, 68.4, null];
 
 const C = {
-  s1:'#6366f1', s2:'#eb6834', s3:'#1baf7a', s4:'#eda100',
-  s5:'#e87ba4', s6:'#008300', s7:'#4a3aa7', s8:'#e34948',
+  blue:'#6366f1', orange:'#eb6834', aqua:'#1baf7a', yellow:'#eda100',
+  pink:'#e87ba4', violet:'#4a3aa7',
   good:'#0ca30c', warn:'#fab219', crit:'#d03b3b',
-  grid:'#e1e0d9', muted:'#898781', text:'#52514e'
+  grid:'#e1e0d9', muted:'#898781', text:'#52514e', slate:'#c8c6bf'
 };
 
 const baseOpts = {
   responsive: true,
-  maintainAspectRatio: true,
+  maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
@@ -648,14 +515,17 @@ const baseOpts = {
     }
   },
   scales: {
-    x: { grid: { color: C.grid, lineWidth: 0.5 }, ticks: { color: C.muted, font:{size:11} } },
-    y: { grid: { color: C.grid, lineWidth: 0.5 }, ticks: { color: C.muted, font:{size:11} }, border:{dash:[3,3]} }
+    x: { grid: { color: C.grid }, ticks: { color: C.muted, font:{size:10} } },
+    y: { grid: { color: C.grid }, ticks: { color: C.muted, font:{size:10} } }
   }
 };
+const legendOn = { display:true, position:'bottom', labels:{font:{size:11},color:C.text,boxWidth:10,padding:12} };
 
 function mkLine(id, labels, datasets, yOpts={}) {
   const ctx = document.getElementById(id);
   if (!ctx) return;
+  const existing = Chart.getChart(ctx);
+  if (existing) existing.destroy();
   return new Chart(ctx, {
     type: 'line',
     data: { labels, datasets },
@@ -669,42 +539,39 @@ function mkLine(id, labels, datasets, yOpts={}) {
   });
 }
 
-/* ── Overview line ─────────────────────────────────────────────── */
 mkLine('overviewLineChart', WEEKS, [
-  { label:'System Forecast', data:SYS,   borderColor:C.s1, backgroundColor:C.s1+'18', fill:true, borderWidth:2, pointRadius:3, tension:0.3 },
-  { label:'Final Forecast',  data:FINAL, borderColor:C.s3, backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3 },
-  { label:'Actuals',         data:ACT,   borderColor:C.s2, backgroundColor:'transparent', borderWidth:2, borderDash:[5,4], pointRadius:3, tension:0.3, spanGaps:false }
+  { label:'System Forecast', data:SYS,   borderColor:C.blue,   backgroundColor:'rgba(99,102,241,.08)', fill:true, borderWidth:2, pointRadius:3, tension:0.3 },
+  { label:'Final Forecast',  data:FINAL, borderColor:C.aqua,   backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3 },
+  { label:'Actuals',         data:ACT,   borderColor:C.orange, backgroundColor:'transparent', borderWidth:2, borderDash:[5,4], pointRadius:3, tension:0.3, spanGaps:false }
 ], { title:{display:false} });
 
-/* ── Override pie ──────────────────────────────────────────────── */
 new Chart(document.getElementById('overridePieChart'), {
   type: 'doughnut',
   data: {
     labels: ['Model Correction','PROMO','EVENT','Store-Initiated','Review Team','OTHER'],
-    datasets: [{ data:[32,21,18,14,10,5], backgroundColor:[C.s1,C.s2,C.s3,C.s4,C.s7,C.muted], borderWidth:2, borderColor:'#fcfcfb' }]
+    datasets: [{ data:[32,21,18,14,10,5], backgroundColor:[C.blue,C.orange,C.aqua,C.yellow,C.violet,C.slate], borderWidth:2, borderColor:'#fcfcfb' }]
   },
   options: {
-    responsive:true, maintainAspectRatio:true, cutout:'60%',
+    responsive:true, maintainAspectRatio:false, cutout:'60%',
     plugins: {
-      legend: { position:'right', labels:{ font:{size:11}, color:C.text, boxWidth:10, padding:8 } },
+      legend: { position:'right', labels:{ font:{size:11}, color:C.text, boxWidth:10, padding:10 } },
       tooltip: baseOpts.plugins.tooltip
     }
   }
 });
 
-/* ── Triage bar ────────────────────────────────────────────────── */
 new Chart(document.getElementById('triagedBarChart'), {
   type: 'bar',
   data: {
     labels: WEEKS,
     datasets: [
       { label:'Resolved', data:[120,134,118,140,162,155,148,141,137,143,152,0], backgroundColor:C.good, borderRadius:3, borderSkipped:false },
-      { label:'Open',     data:[28,22,31,24,18,15,21,18,16,14,12,0],            backgroundColor:C.warn,  borderRadius:3, borderSkipped:false },
-      { label:'Escalated',data:[8, 6, 9, 5, 4, 3, 4, 4, 3, 3, 2, 0],           backgroundColor:C.crit,  borderRadius:3, borderSkipped:false },
+      { label:'Open',     data:[28,22,31,24,18,15,21,18,16,14,12,0],            backgroundColor:C.warn, borderRadius:3, borderSkipped:false },
+      { label:'Escalated',data:[8, 6, 9, 5, 4, 3, 4, 4, 3, 3, 2, 0],           backgroundColor:C.crit, borderRadius:3, borderSkipped:false },
     ]
   },
   options: { ...baseOpts,
-    plugins: { ...baseOpts.plugins, legend:{ display:true, labels:{font:{size:11},color:C.text,boxWidth:8,padding:8} } },
+    plugins: { ...baseOpts.plugins, legend:legendOn },
     scales: {
       x: { ...baseOpts.scales.x, stacked:true },
       y: { ...baseOpts.scales.y, stacked:true }
@@ -712,82 +579,70 @@ new Chart(document.getElementById('triagedBarChart'), {
   }
 });
 
-/* ── Waterfall stacked bar ─────────────────────────────────────── */
 new Chart(document.getElementById('waterfallChart'), {
   type: 'bar',
   data: {
     labels: WEEKS,
     datasets: [
-      { label:'System Forecast', data:SYS,  backgroundColor:C.s1+'cc', borderSkipped:false, borderRadius:2 },
-      { label:'Review Adj',      data:FOM,  backgroundColor:C.s3+'cc', borderSkipped:false },
-      { label:'Planner Adj',     data:SOT,  backgroundColor:C.s4+'cc', borderSkipped:false },
-      { label:'Event Adj',       data:EVT,  backgroundColor:C.s5+'cc', borderSkipped:false },
-      { label:'Other Adj',       data:OTH,  backgroundColor:C.s7+'cc', borderSkipped:false },
+      { label:'System Forecast', data:SYS,  backgroundColor:C.blue+'cc',   borderSkipped:false, borderRadius:2 },
+      { label:'Review Adj',      data:FOM,  backgroundColor:C.aqua+'cc',   borderSkipped:false },
+      { label:'Planner Adj',     data:SOT,  backgroundColor:C.yellow+'cc', borderSkipped:false },
+      { label:'Event Adj',       data:EVT,  backgroundColor:C.pink+'cc',   borderSkipped:false },
+      { label:'Other Adj',       data:OTH,  backgroundColor:C.violet+'cc', borderSkipped:false },
     ]
   },
   options: {
     ...baseOpts,
     plugins: {
       ...baseOpts.plugins,
-      legend:{ display:true, labels:{font:{size:11},color:C.text,boxWidth:8,padding:8} },
+      legend: legendOn,
       annotation:{
         annotations:{
           actualLine:{
             type:'line', scaleID:'y', value:0,
-            // we overlay actuals as a dataset instead
           }
         }
       }
     },
     scales: {
       x: { ...baseOpts.scales.x, stacked:true },
-      y: { ...baseOpts.scales.y, stacked:true, title:{display:true,text:'Units (M)',font:{size:11},color:C.muted} }
+      y: { ...baseOpts.scales.y, stacked:true, title:{display:true,text:'Units (M)',font:{size:10},color:C.muted} }
     }
   }
 });
 
-/* ── Cumulative adj ────────────────────────────────────────────── */
-const cumAdj = FOM.map((_,i)=> {
-  const s = FOM[i]+SOT[i]+EVT[i]+OTH[i];
-  return i===0 ? s : +((cumAdj?.[i-1]||0)+s).toFixed(2);
-  // recalculate below
-});
 const cumAdjData = [];
 let running = 0;
 FOM.forEach((_,i)=>{ running += FOM[i]+SOT[i]+EVT[i]+OTH[i]; cumAdjData.push(+running.toFixed(2)); });
 mkLine('adjCumChart', WEEKS, [
-  { label:'Cumulative Adjustment', data:cumAdjData, borderColor:C.s3, backgroundColor:C.s3+'22', fill:true, borderWidth:2, pointRadius:3, tension:0.3 }
-], { title:{display:true,text:'Cumulative Units Adjusted (M)',font:{size:11},color:C.muted} });
+  { label:'Cumulative Adjustment', data:cumAdjData, borderColor:C.aqua, backgroundColor:'rgba(27,175,122,.10)', fill:true, borderWidth:2, pointRadius:3, tension:0.3 }
+], { title:{display:true,text:'Cumulative Units Adjusted (M)',font:{size:10},color:C.muted} });
 
-/* ── Bias trend ────────────────────────────────────────────────── */
 new Chart(document.getElementById('biasChart'), {
   type:'line',
   data:{ labels:WEEKS, datasets:[
-    { label:'Network Bias %', data:BIAS, borderColor:C.s2, backgroundColor:C.s2+'22', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
+    { label:'Network Bias %', data:BIAS, borderColor:C.orange, backgroundColor:'rgba(235,104,52,.10)', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
   ]},
   options:{ ...baseOpts,
     plugins:{ ...baseOpts.plugins,
       annotation:{ annotations:{
-        zeroLine:{ type:'line', scaleID:'y', value:0, borderColor:C.s1, borderWidth:1.5, borderDash:[4,3], label:{display:true,content:'Target: 0%',font:{size:10},color:C.s1,position:'end',backgroundColor:'#fff'} },
+        zeroLine:{ type:'line', scaleID:'y', value:0, borderColor:C.blue, borderWidth:1.5, borderDash:[4,3], label:{display:true,content:'Target: 0%',font:{size:10},color:C.blue,position:'end',backgroundColor:'#fff'} },
         upperBand:{ type:'line', scaleID:'y', value:2,  borderColor:C.good+'66', borderWidth:1, borderDash:[3,3] },
         lowerBand:{ type:'line', scaleID:'y', value:-2, borderColor:C.good+'66', borderWidth:1, borderDash:[3,3] },
       }}
     },
-    scales:{ x:baseOpts.scales.x, y:{ ...baseOpts.scales.y, title:{display:true,text:'Bias %',font:{size:11},color:C.muted} } }
+    scales:{ x:baseOpts.scales.x, y:{ ...baseOpts.scales.y, title:{display:true,text:'Bias %',font:{size:10},color:C.muted} } }
   }
 });
 
-/* ── sMAPE ─────────────────────────────────────────────────────── */
 mkLine('smapeChart', WEEKS, [
-  { label:'sMAPE %', data:SMAPE, borderColor:C.s4, backgroundColor:C.s4+'22', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
-], { title:{display:true,text:'sMAPE %',font:{size:11},color:C.muted} });
+  { label:'sMAPE %', data:SMAPE, borderColor:C.yellow, backgroundColor:'rgba(237,161,0,.10)', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
+], { title:{display:true,text:'sMAPE %',font:{size:10},color:C.muted} });
 
-/* ── Hit rate ──────────────────────────────────────────────────── */
 mkLine('hitRateChart', WEEKS, [
-  { label:'Hit Rate ±15%', data:HITR, borderColor:C.s6, backgroundColor:C.s6+'22', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
-], { title:{display:true,text:'Hit Rate %',font:{size:11},color:C.muted} });
+  { label:'Hit Rate ±15%', data:HITR, borderColor:C.good, backgroundColor:'rgba(12,163,12,.08)', fill:true, borderWidth:2, pointRadius:3, tension:0.3, spanGaps:false }
+], { title:{display:true,text:'Hit Rate %',font:{size:10},color:C.muted} });
 
-/* ── Exceptions table ──────────────────────────────────────────── */
 const excData = [
   {sku:'SKU-12891',desc:'Organic Tortilla Chips 10oz',code:'Model Correction',val:180000,dir:'↑ Over',risk:91,status:'critical'},
   {sku:'SKU-44302',desc:'Premium Ground Beef 3lb',code:'Store-Initiated',val:140000,dir:'↑ Over',risk:84,status:'critical'},
@@ -800,45 +655,44 @@ const excData = [
   {sku:'SKU-24591',desc:'Whole Wheat Bread 20oz',code:'PROMO',val:25000,dir:'↑ Over',risk:29,status:'good'},
   {sku:'SKU-88312',desc:'Greek Yogurt Plain 32oz',code:'Corporate',val:18000,dir:'↓ Under',risk:21,status:'good'},
 ];
+const badgeCls = {critical:'b-crit', warning:'b-warn', good:'b-good'};
 const tbody = document.getElementById('exceptionsTable');
 excData.forEach(r=>{
   const riskColor = r.risk>=80?C.crit:r.risk>=60?C.warn:C.good;
   tbody.innerHTML += `<tr>
-    <td style="font-family:monospace;font-size:11px">${r.sku}</td>
+    <td style="font-family:ui-monospace,Menlo,monospace;font-size:11px">${r.sku}</td>
     <td>${r.desc}</td>
-    <td><code style="background:var(--surface-0);padding:2px 6px;border-radius:3px;font-size:10px">${r.code}</code></td>
+    <td><span class="code-tag">${r.code}</span></td>
     <td style="font-variant-numeric:tabular-nums">$${r.val.toLocaleString()}</td>
-    <td style="font-weight:600;color:${r.dir.startsWith('↑')?C.crit:C.s1}">${r.dir}</td>
+    <td style="font-weight:600;color:${r.dir.startsWith('↑')?C.crit:C.blue}">${r.dir}</td>
     <td>
       <div style="display:flex;align-items:center;gap:6px">
         <div class="risk-bar" style="width:60px"><span style="width:${r.risk}%;background:${riskColor}"></span></div>
         <span style="font-size:11px;font-weight:600;color:${riskColor}">${r.risk}</span>
       </div>
     </td>
-    <td><span class="badge ${r.status}">${r.status}</span></td>
+    <td><span class="badge ${badgeCls[r.status]}">${r.status}</span></td>
   </tr>`;
 });
 
-/* ── Exception stacked chart ───────────────────────────────────── */
 new Chart(document.getElementById('excStackChart'),{
   type:'bar',
   data:{
     labels:['Wk 9','Wk 10','Wk 11','Wk 12'],
     datasets:[
-      {label:'Model Correction',data:[142,118,98,182],backgroundColor:C.s1,borderRadius:2,borderSkipped:false},
-      {label:'PROMO',     data:[72, 81, 64, 84], backgroundColor:C.s2,borderSkipped:false},
-      {label:'EVENT',     data:[48, 32, 19, 59], backgroundColor:C.s3,borderSkipped:false},
-      {label:'Planner Adj', data:[31, 28, 24, 49], backgroundColor:C.s4,borderSkipped:false},
-      {label:'OTHER',     data:[22, 18, 14, 32], backgroundColor:C.s7,borderSkipped:false},
+      {label:'Model Correction',data:[142,118,98,182],backgroundColor:C.blue,borderRadius:2,borderSkipped:false},
+      {label:'PROMO',       data:[72, 81, 64, 84], backgroundColor:C.orange,borderSkipped:false},
+      {label:'EVENT',       data:[48, 32, 19, 59], backgroundColor:C.aqua,borderSkipped:false},
+      {label:'Planner Adj', data:[31, 28, 24, 49], backgroundColor:C.yellow,borderSkipped:false},
+      {label:'OTHER',       data:[22, 18, 14, 32], backgroundColor:C.violet,borderSkipped:false},
     ]
   },
   options:{...baseOpts,
-    plugins:{...baseOpts.plugins, legend:{display:true,labels:{font:{size:11},color:C.text,boxWidth:8,padding:8}}},
-    scales:{ x:{...baseOpts.scales.x,stacked:true}, y:{...baseOpts.scales.y,stacked:true,title:{display:true,text:'Override Value ($K)',font:{size:11},color:C.muted}} }
+    plugins:{...baseOpts.plugins, legend:legendOn},
+    scales:{ x:{...baseOpts.scales.x,stacked:true}, y:{...baseOpts.scales.y,stacked:true,title:{display:true,text:'Override Value ($K)',font:{size:10},color:C.muted}} }
   }
 });
 
-/* ── Risk distribution ─────────────────────────────────────────── */
 new Chart(document.getElementById('riskDistChart'),{
   type:'bar',
   data:{
@@ -853,25 +707,23 @@ new Chart(document.getElementById('riskDistChart'),{
   options:{...baseOpts,
     indexAxis:'y',
     plugins:{...baseOpts.plugins,legend:{display:false}},
-    scales:{x:{...baseOpts.scales.x,title:{display:true,text:'# Items',font:{size:11},color:C.muted}},y:baseOpts.scales.y}
+    scales:{x:{...baseOpts.scales.x,title:{display:true,text:'# Items',font:{size:10},color:C.muted}},y:{...baseOpts.scales.y,grid:{display:false}}}
   }
 });
 
-/* ── Item card trend ───────────────────────────────────────────── */
 function renderItemCard() {
   mkLine('itemTrendChart', WEEKS, [
-    {label:'Final Fcst',data:[4820,4910,5120,5080,5640,5380,5720,5610,5990,5840,5270,5110],borderColor:C.s1,backgroundColor:C.s1+'18',fill:true,borderWidth:2,pointRadius:2,tension:0.3},
-    {label:'Actuals',   data:[4490,4620,4810,4790,5310,5190,5480,5330,5700,5590,5050,null],borderColor:C.s2,backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],pointRadius:2,tension:0.3,spanGaps:false},
-  ], {title:{display:true,text:'Units/store/week',font:{size:11},color:C.muted}});
+    {label:'Final Fcst',data:[4820,4910,5120,5080,5640,5380,5720,5610,5990,5840,5270,5110],borderColor:C.blue,backgroundColor:'rgba(99,102,241,.08)',fill:true,borderWidth:2,pointRadius:2,tension:0.3},
+    {label:'Actuals',   data:[4490,4620,4810,4790,5310,5190,5480,5330,5700,5590,5050,null],borderColor:C.orange,backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],pointRadius:2,tension:0.3,spanGaps:false},
+  ], {title:{display:true,text:'Units/store/week',font:{size:10},color:C.muted}});
 }
 renderItemCard();
 
-/* ── Tab switching ─────────────────────────────────────────────── */
-document.getElementById('tabNav').addEventListener('click', e=>{
+document.getElementById('tabBar').addEventListener('click', e=>{
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
 });
